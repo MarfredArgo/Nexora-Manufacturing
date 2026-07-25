@@ -1,0 +1,10 @@
+{
+    "name": "BusinessIntelligence",
+    "alias": "businessintelligence",
+    "description": "Client-scoped Business Intelligence and Analytics dashboard.",
+    "keywords": ["business-intelligence", "analytics", "nexora"],
+    "priority": 0,
+    "providers": [
+        "Modules\\BusinessIntelligence\\Providers\\BusinessIntelligenceServiceProvider"
+    ]
+}

@@ -1,0 +1,675 @@
+/* The side navigation menu */
+.sidenav {
+  /* Calculate height: 100% of the viewport minus the 62px header minus some gap */
+  height: calc(100vh - 102px); 
+  width: var(--sidebar-width, 0); 
+  position: fixed; 
+  z-index: 1; 
+  /* Push it down below your sticky header (62px) + a 20px gap */
+  top: 82px; 
+  /* Push it away from the left edge */
+  left: 10px; 
+  /* Add the rounded corners seen in the image */
+  border-radius: 25px;
+  /* Changed from black (#111) to a dark blue that fits your app's theme */
+  background-color: #0b1e3d; 
+  overflow-x: hidden; 
+  /* Reduced top padding since it's no longer sitting under a top edge */
+  padding-top: 50px; 
+  transition: 0.5s; 
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 1);
+}
+
+/* Base styling for all sidebar items */
+.sidenav a.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  margin: 4px 16px; /* Adds space on the left/right of the item inside the sidebar */
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  color: #e2e8f0; /* Soft gray/white */
+  border-radius: 99px; /* Creates the pill shape */
+  transition: all 0.2s ease-in-out;
+  white-space: nowrap; /* Prevents text from wrapping to the next line */
+  min-width: 210px; /* Prevent squishing when sidebar closes */
+}
+
+/* Hover effect for inactive items */
+.sidenav a.nav-item:hover:not(.active) {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+/* Active state (The highlighted Dashboard) */
+.sidenav a.nav-item.active {
+  background-color: #ffffff;
+  color: #0b1e3d; /* Dark blue text and icon */
+  font-weight: 600;
+}
+
+/* Hide accordion content by default and animate height */
+.accordion-content {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease-out;
+}
+
+/* Style and animate the drop-down arrow */
+.chevron-icon {
+  width: 16px;
+  height: 16px;
+  transition: transform 0.3s ease;
+}
+
+/* Rotate the arrow when the accordion is open */
+.nav-item.open .chevron-icon {
+  transform: rotate(180deg);
+}
+
+/* Style and size for the SVG icons */
+.nav-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  /* currentColor ensures the icon matches the text color (turns dark when active) */
+  color: currentColor; 
+}
+
+/* Scale down inline SVG icons in sidebar nav items */
+.sidenav a.nav-item > svg:not(.chevron-icon) {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+/* Container for indented items */
+.nav-nested {
+  display: flex;
+  flex-direction: column;
+  margin-top: 4px;
+}
+
+/* Extra indentation and slightly smaller text for sub-menus */
+.sidenav a.nav-item.nested-item {
+  padding-left: 44px; 
+  font-size: 13px;
+  margin: 2px 16px; 
+}
+
+.sidenav a.nav-item.nested-item:active {
+  background-color: #ffffff;
+  color: #0b1e3d; /* Dark blue text and icon */
+  font-weight: 600;
+}
+
+.sidenav a.nav-item.accordion-item.open {
+  background-color: rgba(255, 255, 255, 0.04);
+  color: #ffffff;
+  font-weight: 600;
+}
+/* Position and style the close button (top right corner) */
+.sidenav .closebtn {
+  position: absolute;
+  top: 0;
+  right: 25px;
+  font-size: 36px;
+  margin-left: 50px;
+}
+
+.stock-table tbody tr:nth-child(even) {
+    background-color: #e2e8f0; /* Light gray-blue for even rows */
+}
+
+.stock-table tbody tr:nth-child(odd) {
+    background-color: #ffffff; /* White for odd rows */
+}
+.stock-table thead {
+    background-color: #1b3a6b; /* Dark blue for header */
+    color: #ffffff; /* White text for header */
+}
+
+
+/* Style page content - use this if you want to push the page content to the right when you open the side navigation */
+#main {
+  transition: margin-left .5s;
+  padding: 10px 12px;
+  display: flex;
+  overflow: hidden; /* Prevents horizontal scroll when sidenav is open */
+  margin-left: var(--sidebar-ml, 0px);
+}
+
+/* Extra left clearance when the sidebar is expanded */
+#main.sidebar-open {
+  padding: 10px 12px 10px 28px;
+}
+
+/* =========================================================
+   Responsive Layout Helpers
+   ========================================================= */
+
+/* Content wrapper shared across pages */
+#page-content {
+  flex: 1;
+  padding: 10px 0;
+  overflow-y: auto;
+  min-width: 0;
+  overflow-x: hidden;
+}
+
+/* Responsive stat card grids */
+.responsive-grid-3 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.responsive-grid-4 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.responsive-grid-dashboard {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.responsive-grid-dashboard .span-2,
+.responsive-grid-dashboard .span-4 {
+  grid-column: span 1;
+  min-width: 0;
+}
+
+/* Responsive chart container */
+.chart-container {
+  position: relative;
+  height: 260px;
+  min-width: 0;
+}
+
+/* Filter rows */
+.filter-row {
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.filter-search {
+  display: flex;
+  align-items: center;
+  background: #E2E8F0;
+  border-radius: 8px;
+  padding: 8px 14px;
+  gap: 8px;
+  flex: 1;
+  min-width: 150px;
+}
+
+.filter-select {
+  background: #E2E8F0;
+  color: #000;
+  border: none;
+  border-radius: 20px;
+  padding: 8px 16px;
+  font-size: 13px;
+  font-family: 'Inter', sans-serif;
+  cursor: pointer;
+  outline: none;
+  flex-shrink: 0;
+}
+
+/* Table wrapper */
+.table-wrapper {
+  overflow-x: auto;
+  min-width: 0;
+}
+
+/* White card shell */
+.content-card {
+  background: #ffffff;
+  border-radius: 20px;
+  overflow: hidden;
+  min-width: 0;
+}
+
+/* Dark stat card shell */
+.stat-card {
+  background: #0b1e3d;
+  padding: 20px;
+  border-radius: 20px;
+  min-width: 0;
+}
+
+/* Section heading */
+.section-heading {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 15px;
+  color: #000000;
+  padding: 20px 20px 0 20px;
+}
+
+/* =========================================================
+   Breakpoints
+   ========================================================= */
+
+/* Small laptops / tablets landscape (769px - 1023px) */
+@media screen and (min-width: 769px) {
+  .responsive-grid-3 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .responsive-grid-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .responsive-grid-dashboard {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .responsive-grid-dashboard .span-2,
+  .responsive-grid-dashboard .span-4 {
+    grid-column: span 1;
+  }
+
+  .chart-container {
+    height: 280px;
+  }
+}
+
+/* Desktop (>= 1024px): docked sidebar, full grids */
+@media screen and (min-width: 1024px) {
+  .sidenav {
+    height: calc(100vh - 102px);
+    top: 82px;
+    left: 10px;
+    border-radius: 25px;
+  }
+
+  /* Main content has room for a docked sidebar */
+  #main.sidebar-open {
+    margin-left: 250px;
+  }
+
+  .responsive-grid-3 {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .responsive-grid-4 {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .responsive-grid-dashboard {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .responsive-grid-dashboard .span-2 {
+    grid-column: span 2;
+  }
+
+  .responsive-grid-dashboard .span-4 {
+    grid-column: span 4;
+  }
+
+  .chart-container {
+    height: 300px;
+  }
+}
+
+/* Mobile / tablet portrait (< 1024px): overlay sidebar, full-width content */
+@media screen and (max-width: 1023px) {
+  .sidenav {
+    top: 0;
+    left: 0;
+    height: 100vh;
+    border-radius: 0;
+    z-index: 1000;
+    box-shadow: 4px 0 20px rgba(0, 0, 0, 0.45);
+  }
+
+  #main {
+    margin-left: 0 !important;
+    padding: 10px 12px;
+  }
+
+  #main.sidebar-open {
+    margin-left: 0 !important;
+    padding: 10px 12px;
+  }
+
+  .profile-dropdown {
+    right: 12px;
+    width: calc(100vw - 24px);
+    max-width: 360px;
+  }
+}
+
+/* Very small phones */
+@media screen and (max-width: 480px) {
+  .filter-row {
+    padding: 12px 14px;
+    gap: 8px;
+  }
+
+  .filter-search {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .filter-select {
+    flex: 1 1 calc(50% - 4px);
+    min-width: 0;
+  }
+
+  .stat-card {
+    padding: 16px;
+  }
+
+  .stat-card p:first-child {
+    font-size: 13px !important;
+  }
+
+  .stat-card p:last-child {
+    font-size: 28px !important;
+  }
+}
+
+
+/* Profile dropdown styles */
+.profile-dropdown {
+  position: absolute;
+  top: 78px;
+  right: 20px;
+  width: 320px;
+  background: #e8f0fe;
+  border-radius: 18px;
+  box-shadow: 0 8px 30px rgba(0,0,0,0.35);
+  padding: 20px;
+  z-index: 100;
+  color: #1f2937;
+  opacity: 0;
+  transform: translateY(-8px);
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.profile-dropdown.open {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.profile-dropdown-close {
+  position: absolute;
+  top: 10px;
+  right: 16px;
+  background: none;
+  border: none;
+  font-size: 22px;
+  color: #5f6368;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.profile-dropdown-email {
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 2px;
+}
+
+.profile-dropdown-role {
+  text-align: center;
+  font-size: 12px;
+  color: #5f6368;
+  margin-bottom: 14px;
+}
+
+.profile-dropdown-avatar-wrap {
+  position: relative;
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 10px;
+}
+
+.profile-dropdown-avatar {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: #0b1e3d;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-weight: 600;
+  overflow: hidden;
+}
+
+.profile-dropdown-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-dropdown-edit {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 24px;
+  height: 24px;
+  background: #fff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+}
+
+.profile-dropdown-edit svg {
+  width: 14px;
+  height: 14px;
+  color: #5f6368;
+}
+
+.profile-dropdown-greeting {
+  text-align: center;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1f2937;
+  margin-bottom: 14px;
+}
+
+.profile-dropdown-manage {
+  display: block;
+  width: 100%;
+  text-align: center;
+  padding: 10px 16px;
+  border: 1px solid #dadce0;
+  border-radius: 999px;
+  background: #fff;
+  color: #1a73e8;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  margin-bottom: 18px;
+  transition: background 0.15s ease;
+}
+
+.profile-dropdown-manage:hover {
+  background: #f8f9fa;
+}
+
+.profile-dropdown-menu {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.profile-dropdown-menu li.logout form {
+  margin: 0;
+  padding: 0;
+}
+
+.profile-dropdown-menu li.logout button {
+  all: unset;
+  box-sizing: border-box;
+  cursor: pointer;
+}
+
+.profile-dropdown-menu li a,
+.profile-dropdown-menu li.logout button {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 10px;
+  border-radius: 10px;
+  color: #1f2937;
+  text-decoration: none;
+  font-size: 14px;
+  transition: background 0.15s ease;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.profile-dropdown-menu li a:hover,
+.profile-dropdown-menu li.logout button:hover {
+  background: rgba(26, 115, 232, 0.08);
+}
+
+.profile-dropdown-menu li a svg,
+.profile-dropdown-menu li.logout button svg {
+  width: 18px;
+  height: 18px;
+  color: #5f6368;
+  flex-shrink: 0;
+}
+
+.profile-dropdown-menu li.logout a svg,
+.profile-dropdown-menu li.logout button svg {
+  color: #d93025;
+}
+
+.profile-dropdown-menu li.logout a,
+.profile-dropdown-menu li.logout button {
+  color: #d93025;
+}
+
+/* Sort icon shown next to table column headers */
+.sort-icon {
+    display: inline-block;
+    width: 0.9em;
+    height: 0.9em;
+    vertical-align: middle;
+    margin-left: 4px;
+    color: currentColor;
+    pointer-events: none;
+}
+
+.sort-icon svg {
+    display: block;
+    width: 100%;
+    height: 100%;
+    fill: currentColor;
+}
+
+/* Make table headers with sort icons look clickable */
+.stock-table th[data-sort] {
+    cursor: pointer;
+}
+
+/* On smaller screens, where height is less than 450px, change the style of the sidenav (less padding and a smaller font size) */
+@media screen and (max-height: 450px) {
+  .sidenav {padding-top: 15px;}
+  .sidenav a {font-size: 18px;}
+}
+
+/* =========================================================
+   New responsive helpers introduced during responsive pass
+   ========================================================= */
+
+/* Dashboard KPI card grid */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+
+.dashboard-grid > .stat-card {
+  min-width: 0;
+}
+
+/* Responsive flex toolbar / filter bar */
+.responsive-flex {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+/* Responsive table wrapper */
+.responsive-table {
+  overflow-x: auto;
+  min-width: 0;
+}
+
+.responsive-table table {
+  min-width: 640px;
+  width: 100%;
+}
+
+@media screen and (min-width: 640px) {
+  .dashboard-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+  }
+}
+
+@media screen and (min-width: 1024px) {
+  .dashboard-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 24px;
+  }
+}
+
+/* Warehouse grid / list views */
+#warehouseContainer.grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+}
+@media (min-width: 640px) {
+  #warehouseContainer.grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (min-width: 1024px) {
+  #warehouseContainer.grid { grid-template-columns: repeat(3, 1fr); }
+}
+@media (min-width: 1280px) {
+  #warehouseContainer.grid { grid-template-columns: repeat(4, 1fr); }
+}
+
+#warehouseContainer.flex {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.items-stretch {
+  align-items: stretch;
+}
+
+
+

@@ -1,0 +1,11 @@
+{
+    "name": "Procurement",
+    "alias": "procurement",
+    "description": "Nexora Procurement Module",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\Procurement\\Providers\\ProcurementServiceProvider"
+    ],
+    "files": []
+}

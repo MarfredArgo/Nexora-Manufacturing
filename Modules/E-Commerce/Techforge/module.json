@@ -1,0 +1,11 @@
+{
+    "name": "Techforge",
+    "alias": "ecommerce",
+    "description": "Nexora Ecommerce storefront module",
+    "keywords": [],
+    "priority": 0,
+    "providers": [
+        "Modules\\Ecommerce\\Providers\\EcommerceServiceProvider"
+    ],
+    "files": []
+}

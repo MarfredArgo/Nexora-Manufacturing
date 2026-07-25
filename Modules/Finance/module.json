@@ -1,0 +1,9 @@
+{
+    "name": "Finance",
+    "alias": "finance",
+    "description": "Nexora Finance and Accounting Module",
+    "keywords": [],
+    "priority": 0,
+    "providers": ["Modules\\Finance\\Providers\\FinanceServiceProvider"],
+    "files": []
+}

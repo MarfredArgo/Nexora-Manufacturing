@@ -1,0 +1,581 @@
+{
+  "statusStyles": {
+    "Building": {
+      "pill": "bg-nexora-warning/80 text-nexora-off-white",
+      "dot": "bg-nexora-warning"
+    },
+    "QC Check": {
+      "pill": "bg-nexora-info/80 text-nexora-off-white",
+      "dot": "bg-nexora-info"
+    },
+    "Cancelled": {
+      "pill": "bg-nexora-gray/80 text-nexora-off-white",
+      "dot": "bg-nexora-gray"
+    },
+    "Pending": {
+      "pill": "bg-nexora-danger/80 text-nexora-off-white",
+      "dot": "bg-nexora-danger"
+    },
+    "Finished": {
+      "pill": "bg-nexora-success/80 text-nexora-off-white",
+      "dot": "bg-nexora-success"
+    }
+  },
+  "partStyles": {
+    "Ready": {
+      "dot": "bg-nexora-success",
+      "text": "text-nexora-success"
+    },
+    "Sourcing": {
+      "dot": "bg-nexora-warning",
+      "text": "text-nexora-warning"
+    },
+    "Missing": {
+      "dot": "bg-nexora-danger",
+      "text": "text-nexora-danger"
+    }
+  },
+  "qcTemplates": {
+    "gaming": [
+      {
+        "id": "g01",
+        "category": "CPU",
+        "name": "Cinebench R23 Multicore",
+        "tool": "Cinebench R23",
+        "target": 20000,
+        "operator": ">=",
+        "unit": "pts"
+      },
+      {
+        "id": "g02",
+        "category": "CPU",
+        "name": "CPU Temp Under Load",
+        "tool": "HWiNFO64",
+        "target": 85,
+        "operator": "<=",
+        "unit": "\u00b0C"
+      },
+      {
+        "id": "g03",
+        "category": "GPU",
+        "name": "3DMark TimeSpy",
+        "tool": "3DMark",
+        "target": 10000,
+        "operator": ">=",
+        "unit": "pts"
+      },
+      {
+        "id": "g04",
+        "category": "GPU",
+        "name": "GPU Temp Under Load",
+        "tool": "HWiNFO64",
+        "target": 85,
+        "operator": "<=",
+        "unit": "\u00b0C"
+      },
+      {
+        "id": "g05",
+        "category": "RAM",
+        "name": "RAM Speed (XMP/EXPO)",
+        "tool": "CPU-Z",
+        "target": 5200,
+        "operator": ">=",
+        "unit": "MT/s"
+      },
+      {
+        "id": "g06",
+        "category": "Storage",
+        "name": "NVMe Sequential Read",
+        "tool": "CrystalDiskMark",
+        "target": 5000,
+        "operator": ">=",
+        "unit": "MB/s"
+      },
+      {
+        "id": "g07",
+        "category": "System",
+        "name": "POST & Boot Sequence",
+        "tool": "Visual",
+        "target": 1,
+        "operator": "=",
+        "unit": "pass"
+      },
+      {
+        "id": "g08",
+        "category": "System",
+        "name": "Cable Management Check",
+        "tool": "Visual",
+        "target": 1,
+        "operator": "=",
+        "unit": "pass"
+      }
+    ],
+    "workstation": [
+      {
+        "id": "w01",
+        "category": "CPU",
+        "name": "Cinebench R23 Multicore",
+        "tool": "Cinebench R23",
+        "target": 30000,
+        "operator": ">=",
+        "unit": "pts"
+      },
+      {
+        "id": "w02",
+        "category": "CPU",
+        "name": "CPU Temp Under Load",
+        "tool": "HWiNFO64",
+        "target": 85,
+        "operator": "<=",
+        "unit": "\u00b0C"
+      },
+      {
+        "id": "w03",
+        "category": "GPU",
+        "name": "3DMark TimeSpy Extreme",
+        "tool": "3DMark",
+        "target": 12000,
+        "operator": ">=",
+        "unit": "pts"
+      },
+      {
+        "id": "w04",
+        "category": "GPU",
+        "name": "GPU Temp Under Load",
+        "tool": "HWiNFO64",
+        "target": 83,
+        "operator": "<=",
+        "unit": "\u00b0C"
+      },
+      {
+        "id": "w05",
+        "category": "RAM",
+        "name": "RAM Speed (XMP/EXPO)",
+        "tool": "CPU-Z",
+        "target": 5600,
+        "operator": ">=",
+        "unit": "MT/s"
+      },
+      {
+        "id": "w06",
+        "category": "Storage",
+        "name": "NVMe Sequential Read",
+        "tool": "CrystalDiskMark",
+        "target": 6500,
+        "operator": ">=",
+        "unit": "MB/s"
+      },
+      {
+        "id": "w07",
+        "category": "Storage",
+        "name": "NVMe Sequential Write",
+        "tool": "CrystalDiskMark",
+        "target": 5000,
+        "operator": ">=",
+        "unit": "MB/s"
+      },
+      {
+        "id": "w08",
+        "category": "System",
+        "name": "POST & Boot Sequence",
+        "tool": "Visual",
+        "target": 1,
+        "operator": "=",
+        "unit": "pass"
+      },
+      {
+        "id": "w09",
+        "category": "System",
+        "name": "Cable Management Check",
+        "tool": "Visual",
+        "target": 1,
+        "operator": "=",
+        "unit": "pass"
+      }
+    ],
+    "budget": [
+      {
+        "id": "b01",
+        "category": "CPU",
+        "name": "Cinebench R23 Multicore",
+        "tool": "Cinebench R23",
+        "target": 8000,
+        "operator": ">=",
+        "unit": "pts"
+      },
+      {
+        "id": "b02",
+        "category": "CPU",
+        "name": "CPU Temp Under Load",
+        "tool": "HWiNFO64",
+        "target": 90,
+        "operator": "<=",
+        "unit": "\u00b0C"
+      },
+      {
+        "id": "b03",
+        "category": "GPU",
+        "name": "3DMark Night Raid",
+        "tool": "3DMark",
+        "target": 15000,
+        "operator": ">=",
+        "unit": "pts"
+      },
+      {
+        "id": "b04",
+        "category": "RAM",
+        "name": "RAM Speed",
+        "tool": "CPU-Z",
+        "target": 3200,
+        "operator": ">=",
+        "unit": "MT/s"
+      },
+      {
+        "id": "b05",
+        "category": "Storage",
+        "name": "Storage Read Speed",
+        "tool": "CrystalDiskMark",
+        "target": 400,
+        "operator": ">=",
+        "unit": "MB/s"
+      },
+      {
+        "id": "b06",
+        "category": "System",
+        "name": "POST & Boot Sequence",
+        "tool": "Visual",
+        "target": 1,
+        "operator": "=",
+        "unit": "pass"
+      }
+    ],
+    "office": [
+      {
+        "id": "o01",
+        "category": "CPU",
+        "name": "Cinebench R23 Multicore",
+        "tool": "Cinebench R23",
+        "target": 5000,
+        "operator": ">=",
+        "unit": "pts"
+      },
+      {
+        "id": "o02",
+        "category": "CPU",
+        "name": "CPU Temp Under Load",
+        "tool": "HWiNFO64",
+        "target": 90,
+        "operator": "<=",
+        "unit": "\u00b0C"
+      },
+      {
+        "id": "o03",
+        "category": "Storage",
+        "name": "Storage Read Speed",
+        "tool": "CrystalDiskMark",
+        "target": 300,
+        "operator": ">=",
+        "unit": "MB/s"
+      },
+      {
+        "id": "o04",
+        "category": "System",
+        "name": "POST & Boot Sequence",
+        "tool": "Visual",
+        "target": 1,
+        "operator": "=",
+        "unit": "pass"
+      }
+    ]
+  },
+  "qcSessions": [
+    {
+      "woId": "WO-2024-0040",
+      "template": "workstation",
+      "tech": "Sarah L.",
+      "results": [
+        {
+          "checkId": "w01",
+          "value": 38200,
+          "verdict": "Pass",
+          "note": ""
+        },
+        {
+          "checkId": "w02",
+          "value": 71,
+          "verdict": "Pass",
+          "note": ""
+        },
+        {
+          "checkId": "w03",
+          "value": 19800,
+          "verdict": "Pass",
+          "note": ""
+        },
+        {
+          "checkId": "w04",
+          "value": 78,
+          "verdict": "Pass",
+          "note": ""
+        },
+        {
+          "checkId": "w05",
+          "value": 5600,
+          "verdict": "Pass",
+          "note": ""
+        },
+        {
+          "checkId": "w06",
+          "value": 7100,
+          "verdict": "Pass",
+          "note": ""
+        },
+        {
+          "checkId": "w07",
+          "value": 6800,
+          "verdict": "Pass",
+          "note": ""
+        },
+        {
+          "checkId": "w08",
+          "value": 1,
+          "verdict": "Pass",
+          "note": ""
+        },
+        {
+          "checkId": "w09",
+          "value": 1,
+          "verdict": "Pass",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "woId": "WO-2024-0035",
+      "template": "gaming",
+      "tech": "Marco R.",
+      "results": [
+        {
+          "checkId": "g01",
+          "value": 35500,
+          "verdict": "Pass",
+          "note": ""
+        },
+        {
+          "checkId": "g02",
+          "value": 72,
+          "verdict": "Pass",
+          "note": ""
+        },
+        {
+          "checkId": "g03",
+          "value": 21400,
+          "verdict": "Pass",
+          "note": ""
+        },
+        {
+          "checkId": "g04",
+          "value": 88,
+          "verdict": "Warn",
+          "note": "Slightly above threshold, monitor under extended load"
+        },
+        {
+          "checkId": "g05",
+          "value": 6000,
+          "verdict": "Pass",
+          "note": ""
+        },
+        {
+          "checkId": "g06",
+          "value": 7200,
+          "verdict": "Pass",
+          "note": ""
+        },
+        {
+          "checkId": "g07",
+          "value": 1,
+          "verdict": "Pass",
+          "note": ""
+        },
+        {
+          "checkId": "g08",
+          "value": 1,
+          "verdict": "Pass",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "woId": "WO-2024-0027",
+      "template": "gaming",
+      "tech": "Marco R.",
+      "results": [
+        {
+          "checkId": "g01",
+          "value": 17800,
+          "verdict": "Warn",
+          "note": "Score slightly below target, may need retest"
+        },
+        {
+          "checkId": "g02",
+          "value": 80,
+          "verdict": "Pass",
+          "note": ""
+        },
+        {
+          "checkId": "g03",
+          "value": 9200,
+          "verdict": "Warn",
+          "note": "3DMark score below expected for RTX 3060"
+        },
+        {
+          "checkId": "g04",
+          "value": 76,
+          "verdict": "Pass",
+          "note": ""
+        },
+        {
+          "checkId": "g05",
+          "value": null,
+          "verdict": "",
+          "note": ""
+        },
+        {
+          "checkId": "g06",
+          "value": null,
+          "verdict": "",
+          "note": ""
+        },
+        {
+          "checkId": "g07",
+          "value": null,
+          "verdict": "",
+          "note": ""
+        },
+        {
+          "checkId": "g08",
+          "value": null,
+          "verdict": "",
+          "note": ""
+        }
+      ]
+    },
+    {
+      "woId": "WO-2024-0022",
+      "template": "gaming",
+      "tech": "Sarah L.",
+      "results": [
+        {
+          "checkId": "g01",
+          "value": null,
+          "verdict": "",
+          "note": ""
+        },
+        {
+          "checkId": "g02",
+          "value": null,
+          "verdict": "",
+          "note": ""
+        },
+        {
+          "checkId": "g03",
+          "value": null,
+          "verdict": "",
+          "note": ""
+        },
+        {
+          "checkId": "g04",
+          "value": null,
+          "verdict": "",
+          "note": ""
+        },
+        {
+          "checkId": "g05",
+          "value": null,
+          "verdict": "",
+          "note": ""
+        },
+        {
+          "checkId": "g06",
+          "value": null,
+          "verdict": "",
+          "note": ""
+        },
+        {
+          "checkId": "g07",
+          "value": null,
+          "verdict": "",
+          "note": ""
+        },
+        {
+          "checkId": "g08",
+          "value": null,
+          "verdict": "",
+          "note": ""
+        }
+      ]
+    }
+  ],
+  "reworkOrders": [
+    {
+      "id": "RW-2024-001",
+      "woId": "WO-2024-0035",
+      "buildName": "Streaming Setup Pro",
+      "assignedTech": "Marco R.",
+      "raisedBy": "Marco R.",
+      "raisedDate": "Jun 28, 2024",
+      "status": "Waiting for Part",
+      "priority": "High",
+      "failedChecks": [
+        {
+          "checkId": "g04",
+          "checkName": "GPU Temp Under Load",
+          "verdict": "Warn",
+          "result": "88\u00b0C",
+          "target": "<= 85\u00b0C",
+          "reason": "Slightly above threshold, monitor under extended load"
+        }
+      ],
+      "requiredParts": [
+        {
+          "name": "Replacement GPU Cooler (RTX 4070)",
+          "status": "Sourcing",
+          "eta": "Jul 3, 2024"
+        }
+      ],
+      "notes": "GPU running warm under sustained load. Likely needs reseating or cooler swap before QC recheck.",
+      "escalatedToInventory": true
+    },
+    {
+      "id": "RW-2024-002",
+      "woId": "WO-2024-0027",
+      "buildName": "Content Creator Lite",
+      "assignedTech": "Marco R.",
+      "raisedBy": "Marco R.",
+      "raisedDate": "Jun 27, 2024",
+      "status": "In Rework",
+      "priority": "Medium",
+      "failedChecks": [
+        {
+          "checkId": "g01",
+          "checkName": "Cinebench R23 Multicore",
+          "verdict": "Warn",
+          "result": "17,800 pts",
+          "target": ">= 20,000 pts",
+          "reason": "Score slightly below target, may need retest or BIOS update"
+        },
+        {
+          "checkId": "g03",
+          "checkName": "3DMark TimeSpy",
+          "verdict": "Warn",
+          "result": "9,200 pts",
+          "target": ">= 10,000 pts",
+          "reason": "3DMark score below expected for RTX 3060"
+        }
+      ],
+      "requiredParts": [],
+      "notes": "Technician updating BIOS and GPU drivers. Will re-run benchmarks after update.",
+      "escalatedToInventory": false
+    }
+  ]
+}

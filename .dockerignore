@@ -1,0 +1,9 @@
+.git
+.env
+.env.*
+!.env.example
+node_modules
+vendor
+storage/logs
+bootstrap/cache/*.php
+npm-debug.log*

@@ -1,0 +1,1 @@
+{"name":"OrderFulfillment","alias":"order-fulfillment","description":"Nexora Order Fulfillment Module","keywords":[],"priority":0,"providers":["Modules\\OrderFulfillment\\Providers\\OrderFulfillmentServiceProvider"],"files":[]}
