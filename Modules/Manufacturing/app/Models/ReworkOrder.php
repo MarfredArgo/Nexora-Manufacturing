@@ -22,6 +22,15 @@ protected $primaryKey = 'id';
         'escalated_to_inventory' => 'boolean',
     ];
 
+    // Highest priority first, then stable by id. Used everywhere rework orders
+    // are indexed by position so the list order and lookups stay in sync.
+    public function scopeByPriority($query)
+    {
+        return $query
+            ->orderByRaw("CASE priority WHEN 'High' THEN 0 WHEN 'Medium' THEN 1 WHEN 'Low' THEN 2 ELSE 3 END")
+            ->orderBy('id');
+    }
+
     public function workOrder()
     {
         return $this->belongsTo(WorkOrder::class, 'wo_id');

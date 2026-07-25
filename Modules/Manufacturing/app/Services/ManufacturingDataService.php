@@ -122,7 +122,7 @@ class ManufacturingDataService
     // ── Rework orders ────────────────────────────────────────────────────────
     public function reworkOrders(): array
     {
-        return ReworkOrder::with(['failedChecks', 'requiredParts'])->orderBy('id')->get()->map(fn ($rw) => [
+        return ReworkOrder::with(['failedChecks', 'requiredParts'])->byPriority()->get()->map(fn ($rw) => [
             'id'                     => $rw->id,
             'woId'                   => $rw->wo_id,
             'buildName'              => $rw->build_name,

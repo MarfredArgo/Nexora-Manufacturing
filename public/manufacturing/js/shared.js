@@ -120,3 +120,19 @@ function runConfirmedAction() {
     _confirmCallback = null;
     if (typeof callback === 'function') callback();
 }
+
+// ── Profile dropdown ───────────────────────────────────────────────────────
+const PROFILE_HIDDEN = ['opacity-0', '-translate-y-2', 'pointer-events-none'];
+
+function toggleProfileDropdown() {
+    const d = document.getElementById('profileDropdown');
+    if (!d) return;
+    PROFILE_HIDDEN.forEach(c => d.classList.toggle(c));
+}
+
+document.addEventListener('click', function (e) {
+    const d = document.getElementById('profileDropdown');
+    if (d && !e.target.closest('[onclick*="Profile"]') && !e.target.closest('#profileDropdown')) {
+        d.classList.add(...PROFILE_HIDDEN);
+    }
+});

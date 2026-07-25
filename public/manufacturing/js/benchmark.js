@@ -6,6 +6,8 @@ let bmRows = {};
 // ── Modal open ──────────────────────────────────────────────────────────
 function openBenchmarkModal() {
     bmRows = {};
+    document.getElementById('bm-modal-woid').textContent = benchmarkData.woId + ' • Enter / update benchmark results';
+    document.getElementById('bm-modal-name').textContent = benchmarkData.orderName;
     renderBenchmarkChecks();
     updateBenchmarkCounts();
     document.getElementById('bm-save-msg').classList.add('hidden');
@@ -79,6 +81,7 @@ function renderBenchmarkChecks() {
                                id="val-${check.id}"
                                value="${curVal}"
                                placeholder="Result"
+                               required
                                oninput="onBenchmarkValueInput('${check.id}', ${check.target}, '${check.operator}', '${check.unit}')"
                                class="w-full bg-transparent text-xs text-nexora-deep-navy placeholder-nexora-navy-mid/50
                                       focus:outline-none [appearance:textfield]">
@@ -155,6 +158,28 @@ function updateBenchmarkCounts() {
 
 // ── Save ────────────────────────────────────────────────────────────────
 async function saveBenchmarkResults() {
+    // Every measurable check must have a result value before saving. Pass/fail
+    // checks (unit === 'pass') are verdict-only and are exempt.
+    const missing = [];
+    benchmarkData.checks.forEach(check => {
+        if (check.unit === 'pass') return;
+        const row = bmRows[check.id];
+        const input = document.getElementById(`val-${check.id}`);
+        if (!row || row.value === null || row.value === undefined || row.value === '') {
+            missing.push(check.id);
+            if (input) input.parentElement.classList.add('border-nexora-danger');
+        } else if (input) {
+            input.parentElement.classList.remove('border-nexora-danger');
+        }
+    });
+
+    if (missing.length) {
+        alert(`Please enter a result for all ${missing.length} remaining check(s) before saving.`);
+        const first = document.getElementById(`val-${missing[0]}`);
+        if (first) first.focus();
+        return;
+    }
+
     const results = Object.entries(bmRows).map(([checkId, data]) => ({
         checkId,
         value:   data.value,

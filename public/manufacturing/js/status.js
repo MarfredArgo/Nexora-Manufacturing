@@ -21,7 +21,7 @@ function openEditModal(i) {
     statusEl.className   = 'px-2.5 py-1 rounded-full text-xs font-bold ' + getStatusPill(order.status);
 
     const allPartsAlreadyReady = order.parts.every(p => p.status === 'Ready');
-    const showQCBtn = order.status === 'Finished' || (order.status === 'Building' && allPartsAlreadyReady);
+    const showQCBtn = order.status === 'Finished' || (['Building','Pending'].includes(order.status) && allPartsAlreadyReady);
     document.getElementById('section-order-status').classList.toggle('hidden', !showQCBtn);
 
     document.getElementById('section-cancel-order').classList.toggle('hidden', order.status === 'Cancelled');
@@ -44,19 +44,14 @@ function renderPartsList(parts) {
         const dotColor  = isReady ? 'bg-green-500' : isSourcing ? 'bg-yellow-400' : 'bg-red-500';
         const textColor = isReady ? 'text-green-600' : isSourcing ? 'text-yellow-600' : 'text-red-500';
 
-        const toggleBtn = isSourcing
+        const toggleBtn = (isSourcing || isMissing)
             ? `<button onclick="markReady(${idx})" id="toggle-${idx}"
                        class="flex-shrink-0 ml-3 px-3 py-1 rounded-full text-[10px] font-semibold
                               border border-green-500 text-green-600
-                              hover:bg-green-500 hover:text-white transition-colors">
+                              hover:bg-green-500 hover:text-white transition-colors"
+                       title="${isMissing ? 'Mark as restocked & ready' : 'Mark ready'}">
                    Mark Ready
                </button>`
-            : isMissing
-            ? `<span class="flex-shrink-0 ml-3 px-3 py-1 rounded-full text-[10px] font-semibold
-                           bg-red-100 text-red-400 border border-red-200 cursor-not-allowed"
-                    title="Out of stock — cannot change">
-                   Out of Stock
-               </span>`
             : `<span class="flex-shrink-0 ml-3 px-2 py-1 rounded-full text-[10px] font-semibold
                            bg-green-100 text-green-600">
                    ✓ Ready
@@ -96,7 +91,7 @@ function markReady(partIdx) {
     if (editingOrderIndex !== null) {
         const order       = workOrdersData[editingOrderIndex];
         const allNowReady = order.parts.every((p, idx) => (pendingChanges[idx] ?? p.status) === 'Ready');
-        if (allNowReady && order.status === 'Building') {
+        if (allNowReady && ['Building','Pending'].includes(order.status)) {
             document.getElementById('section-order-status').classList.remove('hidden');
         }
     }
@@ -128,7 +123,7 @@ async function saveChanges() {
 
     const order      = workOrdersData[editingOrderIndex];
     const allReady   = order.parts.every((part, idx) => (pendingChanges[idx] ?? part.status) === 'Ready');
-    const autoFinish = allReady && order.status === 'Building';
+    const autoFinish = allReady && ['Building','Pending'].includes(order.status);
 
     const payload = {
         workOrderId: order.id,

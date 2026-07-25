@@ -11,6 +11,21 @@
         ? collect($sourceWo['parts'])->whereIn('status', ['Sourcing', 'Missing'])->values()
         : collect([]);
 
+    // Retest is only allowed once every requested replacement part has been
+    // received and marked Ready (no parts needed = software/config-only rework).
+    $reqParts       = collect($selectedRework['requiredParts'] ?? []);
+    $partsReplaced  = $reqParts->isEmpty() || $reqParts->every(fn($p) => ($p['status'] ?? '') === 'Ready');
+
+    // Live Inventory availability per replacement part — drives the Grab button.
+    $bridge   = app(\Modules\Manufacturing\Services\InventoryBridgeService::class);
+    $clientId = ((int) session('employee_client_id')) ?: null;
+    $stockFor = [];
+    foreach ($reqParts as $pi => $p) {
+        $stockFor[$pi] = ($p['status'] ?? '') === 'Ready'
+            ? 0
+            : $bridge->availableStockFor($p['name'] ?? '', $clientId);
+    }
+
     $reworkPill = fn($s) => match($s) {
         'Waiting for Part' => 'bg-nexora-warning/80 text-nexora-off-white',
         'In Rework'        => 'bg-nexora-info/80 text-nexora-off-white',
@@ -152,33 +167,42 @@
                 </table>
             </div>
 
-            {{-- Replacement parts needed --}}
+            {{-- Replacement parts — auto-listed from the build's failed parts.
+                 Status is driven by stock: Missing = out of stock, Sourcing = has
+                 stock (grab enabled), Ready = grabbed. No manual add/edit. --}}
             <div class="flex-1 bg-nexora-slate-200 border border-nexora-corporate/50 rounded-xl p-4">
-                <div class="flex items-center justify-between mb-3">
-                    <p class="text-[10px] font-semibold text-nexora-deep-navy uppercase tracking-wider">Replacement Parts Required</p>
-                    <button onclick="openAddPartModal({{ $selectedIdx }})"
-                            class="text-[10px] font-semibold px-2.5 py-1 rounded-full border border-nexora-corporate
-                                   text-nexora-corporate hover:bg-nexora-corporate hover:text-white transition-colors">
-                        + Add Part
-                    </button>
-                </div>
+                <p class="text-[10px] font-semibold text-nexora-deep-navy uppercase tracking-wider mb-3">Replacement Parts Required</p>
                 @if(count($selectedRework['requiredParts']) > 0)
                     <div class="flex flex-col gap-2">
                         @foreach($selectedRework['requiredParts'] as $pi => $part)
+                            @php
+                                $isReady = ($part['status'] ?? '') === 'Ready';
+                                $avail   = $isReady ? 0 : ($stockFor[$pi] ?? 0);
+                                $disp    = $isReady ? 'Ready' : ($avail > 0 ? 'Sourcing' : 'Missing');
+                            @endphp
                             <div class="flex items-center justify-between gap-3 px-3 py-2.5 rounded-lg
                                         bg-nexora-slate-500/10 border border-nexora-corporate/20
                                         hover:bg-nexora-steel-blue/20 transition-colors">
                                 <p class="text-xs font-medium text-nexora-deep-navy">{{ $part['name'] }}</p>
                                 <div class="flex items-center gap-3 flex-shrink-0">
-                                    @if(!empty($part['eta']))
-                                        <p class="text-[10px] text-nexora-navy-mid">ETA: {{ $part['eta'] }}</p>
+                                    <span class="px-2.5 py-1 rounded-full text-[10px] font-semibold {{ $partPill($disp) }}">
+                                        {{ $disp === 'Missing' ? 'Out of Stock' : $disp }}
+                                    </span>
+                                    @if($isReady)
+                                        <span class="text-[10px] font-semibold text-nexora-success">✓ Replaced</span>
+                                    @elseif($avail > 0)
+                                        <button onclick="grabReplacementPart({{ $selectedIdx }}, {{ $pi }})"
+                                                class="text-[10px] font-semibold px-2.5 py-0.5 rounded-full border border-nexora-success
+                                                       text-nexora-success hover:bg-nexora-success hover:text-white transition-colors">
+                                            Grab from Stock
+                                        </button>
+                                    @else
+                                        <button disabled title="Out of stock — waiting for restock"
+                                                class="text-[10px] font-semibold px-2.5 py-0.5 rounded-full border border-nexora-corporate/20
+                                                       bg-nexora-slate-500/20 text-nexora-navy-mid/60 cursor-not-allowed">
+                                            Awaiting Stock
+                                        </button>
                                     @endif
-                                    <span class="px-2.5 py-1 rounded-full text-[10px] font-semibold {{ $partPill($part['status']) }}">{{ $part['status'] }}</span>
-                                    <button onclick="openEditPartModal({{ $selectedIdx }}, {{ $pi }})"
-                                            class="text-[10px] px-2 py-0.5 rounded-full border border-nexora-corporate/40
-                                                   text-nexora-navy-mid hover:bg-nexora-slate-500/20 transition-colors">
-                                        Edit
-                                    </button>
                                 </div>
                             </div>
                         @endforeach
@@ -265,11 +289,19 @@
                 @endforeach
             </div>
 
-            <button onclick="openMarkReadyForQCModal({{ $selectedIdx }})"
-                    class="w-full py-2 rounded-xl text-xs font-semibold border border-nexora-corporate
-                           bg-nexora-corporate text-white hover:bg-nexora-navy-mid transition-colors">
-                Mark Ready for QC
-            </button>
+            @if($partsReplaced)
+                <button onclick="openMarkReadyForQCModal({{ $selectedIdx }})"
+                        class="w-full py-2 rounded-xl text-xs font-semibold border border-nexora-corporate
+                               bg-nexora-corporate text-white hover:bg-nexora-navy-mid transition-colors">
+                    Mark Ready for QC
+                </button>
+            @else
+                <button disabled title="All replacement parts must be received and marked Ready first."
+                        class="w-full py-2 rounded-xl text-xs font-semibold border border-nexora-corporate/20
+                               bg-nexora-slate-500/20 text-nexora-navy-mid/60 cursor-not-allowed">
+                    Awaiting Replacement Parts
+                </button>
+            @endif
         </div>
     </div>
     @else
@@ -277,100 +309,9 @@
     @endif
 </div>
 
-{{-- ── EDIT REWORK MODAL ──────────────────────────────────────────────────── --}}
-<div id="rework-edit-backdrop" class="modal-backdrop fixed inset-0 z-50 flex items-center justify-center hidden" onclick="handleBackdropClick(event,'rework-edit-backdrop')">
-    <div class="absolute inset-0 bg-nexora-deep-navy/40 backdrop-blur-sm pointer-events-none"></div>
-    <div onclick="event.stopPropagation()" class="relative z-10 bg-nexora-off-white border border-nexora-corporate/50 rounded-2xl shadow-2xl w-full max-w-md mx-4 max-h-[80vh] flex flex-col">
-        <div class="flex items-center justify-between px-5 pt-5 pb-3 border-b border-nexora-corporate/20 flex-shrink-0">
-            <div>
-                <p class="text-[10px] text-nexora-navy-mid mb-0.5">Edit Rework Order</p>
-                <h2 id="rw-modal-title" class="text-base font-bold text-nexora-deep-navy"></h2>
-            </div>
-            <button onclick="closeModal('rework-edit-backdrop')" class="w-7 h-7 rounded-full flex items-center justify-center text-nexora-navy-mid hover:bg-nexora-slate-500/20 transition-colors text-lg leading-none">✕</button>
-        </div>
-        <div class="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden px-5 py-4 flex flex-col gap-4">
-            <div>
-                <label class="text-[10px] font-semibold text-nexora-slate-500 uppercase tracking-wider">Status</label>
-                <select id="rw-modal-status" class="mt-1.5 w-full border border-nexora-corporate/40 rounded-lg px-3 py-2 text-xs text-nexora-deep-navy bg-nexora-slate-200 focus:outline-none focus:border-nexora-corporate">
-                    <option>Waiting for Part</option>
-                    <option>In Rework</option>
-                    <option>Ready for QC</option>
-                </select>
-            </div>
-            <div>
-                <label class="text-[10px] font-semibold text-nexora-slate-500 uppercase tracking-wider">Priority</label>
-                <select id="rw-modal-priority" class="mt-1.5 w-full border border-nexora-corporate/40 rounded-lg px-3 py-2 text-xs text-nexora-deep-navy bg-nexora-slate-200 focus:outline-none focus:border-nexora-corporate">
-                    <option>High</option><option>Medium</option><option>Low</option>
-                </select>
-            </div>
-            <div>
-                <label class="text-[10px] font-semibold text-nexora-slate-500 uppercase tracking-wider">Technician Notes</label>
-                <textarea id="rw-modal-notes" rows="4" class="mt-1.5 w-full border border-nexora-corporate/40 rounded-lg px-3 py-2 text-xs text-nexora-deep-navy bg-nexora-slate-200 focus:outline-none focus:border-nexora-corporate resize-none"></textarea>
-            </div>
-        </div>
-        <div class="flex items-center justify-between px-5 py-3 border-t border-nexora-corporate/20 flex-shrink-0">
-            <p id="rw-modal-save-msg" class="text-xs text-nexora-success hidden">✓ Saved</p>
-            <div class="flex gap-2 ml-auto">
-                <button onclick="closeModal('rework-edit-backdrop')" class="px-4 py-1.5 rounded-full text-xs font-medium border border-nexora-corporate/50 text-nexora-navy-mid hover:bg-nexora-slate-200 transition-colors">Cancel</button>
-                <button onclick="saveReworkEdit()" class="px-4 py-1.5 rounded-full text-xs font-semibold bg-nexora-corporate text-white hover:bg-nexora-navy-mid transition-colors">Save</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-{{-- ── ADD / EDIT PART MODAL ──────────────────────────────────────────────── --}}
-<div id="part-modal-backdrop" class="modal-backdrop fixed inset-0 z-50 flex items-center justify-center hidden" onclick="handleBackdropClick(event,'part-modal-backdrop')">
-    <div class="absolute inset-0 bg-nexora-deep-navy/40 backdrop-blur-sm pointer-events-none"></div>
-    <div onclick="event.stopPropagation()" class="relative z-10 bg-nexora-off-white border border-nexora-corporate/50 rounded-2xl shadow-2xl w-full max-w-sm mx-4 flex flex-col">
-        <div class="flex items-center justify-between px-5 pt-5 pb-3 border-b border-nexora-corporate/20">
-            <h2 id="part-modal-title" class="text-base font-bold text-nexora-deep-navy">Add Replacement Part</h2>
-            <button onclick="closeModal('part-modal-backdrop')" class="w-7 h-7 rounded-full flex items-center justify-center text-nexora-navy-mid hover:bg-nexora-slate-500/20 transition-colors text-lg leading-none">✕</button>
-        </div>
-        <div class="px-5 py-4 flex flex-col gap-3">
-            <input type="hidden" id="part-modal-rework-idx">
-            <input type="hidden" id="part-modal-part-idx">
-            <div>
-                <label class="text-[10px] font-semibold text-nexora-slate-500 uppercase tracking-wider">Part Name</label>
-                <input id="part-modal-name" type="text" placeholder="e.g. Replacement GPU Cooler" class="mt-1.5 w-full border border-nexora-corporate/40 rounded-lg px-3 py-2 text-xs text-nexora-deep-navy bg-nexora-slate-200 focus:outline-none focus:border-nexora-corporate">
-            </div>
-            <div>
-                <label class="text-[10px] font-semibold text-nexora-slate-500 uppercase tracking-wider">Status</label>
-                <select id="part-modal-status" class="mt-1.5 w-full border border-nexora-corporate/40 rounded-lg px-3 py-2 text-xs text-nexora-deep-navy bg-nexora-slate-200 focus:outline-none focus:border-nexora-corporate">
-                    <option>Sourcing</option><option>Ready</option><option>Missing</option>
-                </select>
-            </div>
-            <div>
-                <label class="text-[10px] font-semibold text-nexora-slate-500 uppercase tracking-wider">ETA (optional)</label>
-                <input id="part-modal-eta" type="text" placeholder="e.g. Jul 10, 2024" class="mt-1.5 w-full border border-nexora-corporate/40 rounded-lg px-3 py-2 text-xs text-nexora-deep-navy bg-nexora-slate-200 focus:outline-none focus:border-nexora-corporate">
-            </div>
-        </div>
-        <div class="flex gap-2 justify-end px-5 pb-5">
-            <button onclick="closeModal('part-modal-backdrop')" class="px-4 py-1.5 rounded-full text-xs font-medium border border-nexora-corporate/50 text-nexora-navy-mid hover:bg-nexora-slate-200 transition-colors">Cancel</button>
-            <button id="part-modal-save-btn" onclick="savePartModal()" class="px-4 py-1.5 rounded-full text-xs font-semibold bg-nexora-corporate text-white hover:bg-nexora-navy-mid transition-colors">Add Part</button>
-        </div>
-    </div>
-</div>
-
-{{-- ── MARK READY FOR QC MODAL ────────────────────────────────────────────── --}}
-<div id="qc-ready-backdrop" class="modal-backdrop fixed inset-0 z-50 flex items-center justify-center hidden" onclick="handleBackdropClick(event,'qc-ready-backdrop')">
-    <div class="absolute inset-0 bg-nexora-deep-navy/40 backdrop-blur-sm pointer-events-none"></div>
-    <div onclick="event.stopPropagation()" class="relative z-10 bg-nexora-off-white border border-nexora-corporate/50 rounded-2xl shadow-2xl w-full max-w-sm mx-4">
-        <div class="px-5 pt-5 pb-3 border-b border-nexora-corporate/20">
-            <h2 class="text-base font-bold text-nexora-deep-navy">Mark Ready for QC?</h2>
-            <p class="text-xs text-nexora-navy-mid mt-1">This will update the rework status to "Ready for QC" and queue it for a full benchmark re-check.</p>
-        </div>
-        <div class="flex gap-2 justify-end px-5 py-4">
-            <button onclick="closeModal('qc-ready-backdrop')" class="px-4 py-1.5 rounded-full text-xs font-medium border border-nexora-corporate/50 text-nexora-navy-mid hover:bg-nexora-slate-200 transition-colors">Cancel</button>
-            <button onclick="confirmMarkReadyForQC()" class="px-4 py-1.5 rounded-full text-xs font-semibold bg-nexora-success text-white hover:opacity-90 transition-colors">Confirm</button>
-        </div>
-    </div>
-</div>
-
 <script>
 const reworkData   = @json($reworkOrders->values()->toArray());
 let rwEditIdx      = null;
-let partReworkIdx  = null;
-let partEditIdx    = null; // null = add mode, number = edit mode
 let qcReadyIdx     = null;
 
 // ── Edit rework ──────────────────────────────────────────────────────────────
@@ -401,45 +342,17 @@ async function saveReworkEdit() {
     } catch(e) { alert('Network error'); console.error(e); }
 }
 
-// ── Add / Edit part ──────────────────────────────────────────────────────────
-function openAddPartModal(reworkIdx) {
-    partReworkIdx = reworkIdx; partEditIdx = null;
-    document.getElementById('part-modal-title').textContent    = 'Add Replacement Part';
-    document.getElementById('part-modal-save-btn').textContent = 'Add Part';
-    document.getElementById('part-modal-name').value   = '';
-    document.getElementById('part-modal-status').value = 'Sourcing';
-    document.getElementById('part-modal-eta').value    = '';
-    openModal('part-modal-backdrop');
-}
-
-function openEditPartModal(reworkIdx, partIdx) {
-    partReworkIdx = reworkIdx; partEditIdx = partIdx;
-    const part = reworkData[reworkIdx].requiredParts[partIdx];
-    document.getElementById('part-modal-title').textContent    = 'Edit Part';
-    document.getElementById('part-modal-save-btn').textContent = 'Save';
-    document.getElementById('part-modal-name').value   = part.name;
-    document.getElementById('part-modal-status').value = part.status;
-    document.getElementById('part-modal-eta').value    = part.eta ?? '';
-    openModal('part-modal-backdrop');
-}
-
-async function savePartModal() {
-    const partData = {
-        name:   document.getElementById('part-modal-name').value.trim(),
-        status: document.getElementById('part-modal-status').value,
-        eta:    document.getElementById('part-modal-eta').value.trim() || null,
-    };
-    const url     = partEditIdx !== null ? '/manufacturing/update-rework-part' : '/manufacturing/add-rework-part';
-    const payload = { reworkIndex: partReworkIdx, partIndex: partEditIdx, part: partData, _token: document.querySelector('meta[name="csrf-token"]').content };
+// ── Mark ready for QC ────────────────────────────────────────────────────────
+async function grabReplacementPart(reworkIdx, partIdx) {
+    const payload = { reworkIndex: reworkIdx, partIndex: partIdx, _token: document.querySelector('meta[name="csrf-token"]').content };
     try {
-        const res  = await fetch(url, { method:'POST', headers:{'Content-Type':'application/json','X-CSRF-TOKEN':payload._token}, body:JSON.stringify(payload) });
+        const res  = await fetch('/manufacturing/grab-replacement-part', { method:'POST', headers:{'Content-Type':'application/json','X-CSRF-TOKEN':payload._token}, body:JSON.stringify(payload) });
         const data = await res.json();
-        if (data.success) { closeModal('part-modal-backdrop'); location.reload(); }
-        else alert('Failed: ' + (data.message ?? 'Unknown'));
+        if (data.success) location.reload();
+        else alert(data.message ?? 'Could not grab stock.');
     } catch(e) { alert('Network error'); console.error(e); }
 }
 
-// ── Mark ready for QC ────────────────────────────────────────────────────────
 function openMarkReadyForQCModal(i) { qcReadyIdx = i; openModal('qc-ready-backdrop'); }
 
 async function confirmMarkReadyForQC() {

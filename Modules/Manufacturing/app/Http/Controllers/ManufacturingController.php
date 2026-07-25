@@ -59,18 +59,29 @@ class ManufacturingController extends Controller
 
         DB::connection('manufacturing')->transaction(function () use ($order, $partChanges, $sendToQC, $cancelOrder) {
             $partsByPosition = $order->parts->values();
+            $bridge = new InventoryBridgeService();
 
             foreach ($partChanges as $position => $newStatus) {
                 $part = $partsByPosition->get((int) $position);
                 if (!$part) continue;
-                if ($part->status === 'Sourcing' && $newStatus === 'Ready') {
+                // A component becomes Ready once sourced or restocked (no longer Missing).
+                if (in_array($part->status, ['Sourcing', 'Missing'], true) && $newStatus === 'Ready') {
                     $part->update(['status' => 'Ready']);
+                    // Deduct the reserved component in Inventory and confirm it.
+                    $bridge->consumeReservationForPart($order->id, $part->toArray(), $order->client_id);
                 }
             }
 
             $order->refresh()->load('parts');
 
-            $allReady = $order->parts->every(fn ($p) => $p->status === 'Ready');
+            // A build enters "Building" as soon as a worker is assigned or the first
+            // component is ready — otherwise it can never progress to Finished.
+            if ($order->status === 'Pending'
+                && (! empty($order->assigned) || $order->parts->contains(fn ($p) => $p->status === 'Ready'))) {
+                $order->status = 'Building';
+            }
+
+            $allReady = $order->parts->isNotEmpty() && $order->parts->every(fn ($p) => $p->status === 'Ready');
             if ($allReady && $order->status === 'Building') {
                 $order->status = 'Finished';
             }
@@ -178,6 +189,22 @@ class ManufacturingController extends Controller
                         'reason'     => $r['note'] ?: 'Flagged during QC benchmark',
                     ]);
                 }
+
+                // Auto-list the physical parts behind the failed checks as
+                // replacement parts — no manual "add part". Status starts as
+                // Sourcing (pending); the rework screen shows live stock state.
+                $order->loadMissing('parts');
+                collect($flagged)
+                    ->filter(fn ($r) => $r['verdict'] === 'Fail')
+                    ->map(fn ($r) => explode('_', $r['checkId'])[0])
+                    ->unique()
+                    ->each(function (string $category) use ($rework, $order) {
+                        $buildPart = $order->parts->firstWhere('category', $category);
+                        $rework->requiredParts()->create([
+                            'name'   => $buildPart->name ?? $category,
+                            'status' => 'Sourcing',
+                        ]);
+                    });
             }
 
             if ($flagged) {
@@ -227,10 +254,22 @@ class ManufacturingController extends Controller
     public function updateRework(Request $request): JsonResponse
     {
         $reworkIndex = (int) $request->input('reworkIndex');
-        $rw = ReworkOrder::orderBy('id')->get()->values()->get($reworkIndex);
+        $rw = ReworkOrder::byPriority()->get()->values()->get($reworkIndex);
 
         if (!$rw) {
             return response()->json(['success' => false, 'message' => 'Rework order not found.'], 404);
+        }
+
+        // A rework can only move to "Ready for QC" once every replacement part has
+        // actually been grabbed from stock (status Ready). This blocks bypassing
+        // the grab flow from the edit modal.
+        if ($request->input('status') === 'Ready for QC') {
+            $rw->loadMissing('requiredParts');
+            $allReplaced = $rw->requiredParts->isEmpty()
+                || $rw->requiredParts->every(fn ($p) => $p->status === 'Ready');
+            if (! $allReplaced) {
+                return response()->json(['success' => false, 'message' => 'All replacement parts must be grabbed from stock before retesting.'], 422);
+            }
         }
 
         if ($request->has('status'))     $rw->status   = $request->input('status');
@@ -239,35 +278,21 @@ class ManufacturingController extends Controller
         if ($request->input('escalate')) $rw->escalated_to_inventory = true;
         $rw->save();
 
-        return response()->json(['success' => true]);
-    }
-
-    public function addReworkPart(Request $request): JsonResponse
-    {
-        $reworkIndex = (int) $request->input('reworkIndex');
-        $part        = $request->input('part', []);
-
-        $rw = ReworkOrder::orderBy('id')->get()->values()->get($reworkIndex);
-        if (!$rw) {
-            return response()->json(['success' => false, 'message' => 'Rework order not found.'], 404);
+        // Sending a rework back for retest must re-open the work order for QC —
+        // otherwise updateQC rejects it (it only accepts orders in "QC Check").
+        if ($rw->status === 'Ready for QC') {
+            WorkOrder::where('id', $rw->wo_id)->update(['status' => 'QC Check']);
         }
 
-        $rw->requiredParts()->create([
-            'name'   => (string) ($part['name']   ?? ''),
-            'status' => (string) ($part['status'] ?? 'Sourcing'),
-            'eta'    => $part['eta'] ?? null,
-        ]);
-
         return response()->json(['success' => true]);
     }
 
-    public function updateReworkPart(Request $request): JsonResponse
+    public function grabReplacementPart(Request $request): JsonResponse
     {
         $reworkIndex = (int) $request->input('reworkIndex');
         $partIndex   = (int) $request->input('partIndex');
-        $part        = $request->input('part', []);
 
-        $rw = ReworkOrder::with('requiredParts')->orderBy('id')->get()->values()->get($reworkIndex);
+        $rw = ReworkOrder::with('requiredParts')->byPriority()->get()->values()->get($reworkIndex);
         if (!$rw) {
             return response()->json(['success' => false, 'message' => 'Rework order not found.'], 404);
         }
@@ -277,11 +302,15 @@ class ManufacturingController extends Controller
             return response()->json(['success' => false, 'message' => 'Part not found.'], 404);
         }
 
-        $rp->update([
-            'name'   => (string) ($part['name']   ?? ''),
-            'status' => (string) ($part['status'] ?? 'Sourcing'),
-            'eta'    => $part['eta'] ?? null,
-        ]);
+        $clientId = ((int) session('employee_client_id')) ?: null;
+
+        // Only pulls when unreserved stock exists; otherwise the part stays locked.
+        $grabbed = (new InventoryBridgeService())->grabReplacementFromStock($rp->name, 1, $clientId);
+        if (!$grabbed) {
+            return response()->json(['success' => false, 'message' => 'No stock available for this part yet.'], 422);
+        }
+
+        $rp->update(['status' => 'Ready']);
 
         return response()->json(['success' => true]);
     }
@@ -396,9 +425,9 @@ class ManufacturingController extends Controller
         $woId    = $request->input('woId');
         $order   = WorkOrder::find($woId);
 
-        // Put the defective part straight into Inventory's defect table and pull a
-        // fresh unit from stock (no requisition).
-        (new InventoryBridgeService())->logDefectAndPullStock(
+        // Put the defective part straight into Inventory's defect table. The
+        // replacement is grabbed later, per part, from the rework screen.
+        (new InventoryBridgeService())->logDefect(
             (string) $woId,
             (string) $request->input('partName'),
             (int) $request->input('quantity', 1),
@@ -406,7 +435,7 @@ class ManufacturingController extends Controller
             (string) $request->input('requestedBy')
         );
 
-        return response()->json(['success' => true, 'message' => 'Defective part logged to Inventory and a fresh unit pulled from stock.']);
+        return response()->json(['success' => true, 'message' => 'Defective part logged to Inventory.']);
     }
 
     // ── Work orders (cont.) ──────────────────────────────────────────────────

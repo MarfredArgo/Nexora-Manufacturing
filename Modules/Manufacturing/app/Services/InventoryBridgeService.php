@@ -87,12 +87,12 @@ class InventoryBridgeService
 
     /**
      * #2 — A QC-failed part is sent back: log it straight into the Inventory
-     * defects table and pull a fresh unit from stock (no requisition).
+     * defects table. Grabbing a replacement is a separate, explicit action
+     * (see grabReplacementFromStock), triggered per part from the rework screen.
      */
-    public function logDefectAndPullStock(string $woId, string $partName, int $qty, ?int $clientId, string $createdBy): void
+    public function logDefect(string $woId, string $partName, int $qty, ?int $clientId, string $createdBy): void
     {
         try {
-            // 1) Store the defective part in Inventory's defect table.
             $this->inv()->table('defects')->insert([
                 'client_id'   => $clientId,
                 'part_name'   => $partName,
@@ -105,26 +105,60 @@ class InventoryBridgeService
                 'created_at'  => now(),
                 'updated_at'  => now(),
             ]);
+        } catch (\Throwable $e) {
+            report($e);
+        }
+    }
 
-            // 2) Grab a fresh unit: decrement physical stock for the replacement
-            //    item at a warehouse that actually has enough on hand.
+    /**
+     * Available (unreserved) on-hand quantity in Inventory for a part, summed
+     * across warehouses. Used to enable/disable the "Grab from Stock" button.
+     */
+    public function availableStockFor(?string $partName, ?int $clientId): int
+    {
+        try {
             $itemId = $this->resolveItemId(null, $partName, $clientId);
-            if (!$itemId) return;
+            if (!$itemId) return 0;
+
+            $row = $this->inv()->table('stock_levels')
+                ->where('item_id', $itemId)
+                ->when($clientId, fn ($q) => $q->where('client_id', $clientId))
+                ->selectRaw('COALESCE(SUM(stock), 0) AS s, COALESCE(SUM(reserved_quantity), 0) AS r')
+                ->first();
+
+            return max(0, (int) ($row->s ?? 0) - (int) ($row->r ?? 0));
+        } catch (\Throwable $e) {
+            report($e);
+            return 0;
+        }
+    }
+
+    /**
+     * Pull one (or $qty) fresh unit(s) of a replacement part from stock.
+     * Returns false when no unreserved stock is available (button stays locked).
+     */
+    public function grabReplacementFromStock(?string $partName, int $qty, ?int $clientId): bool
+    {
+        try {
+            $itemId = $this->resolveItemId(null, $partName, $clientId);
+            if (!$itemId) return false;
 
             $sl = $this->inv()->table('stock_levels')
                 ->where('item_id', $itemId)
                 ->when($clientId, fn ($q) => $q->where('client_id', $clientId))
-                ->where('stock', '>=', $qty)
-                ->orderByDesc('stock')
+                ->whereRaw('stock - reserved_quantity >= ?', [$qty])
+                ->orderByRaw('(stock - reserved_quantity) DESC')
                 ->first();
-            if (!$sl) return; // no fresh stock available -> nothing to pull
+            if (!$sl) return false; // no unreserved stock -> caller keeps it locked
 
             $this->inv()->table('stock_levels')->where('id', $sl->id)->update([
                 'stock'      => max(0, $sl->stock - $qty),
                 'updated_at' => now(),
             ]);
+            return true;
         } catch (\Throwable $e) {
             report($e);
+            return false;
         }
     }
 }

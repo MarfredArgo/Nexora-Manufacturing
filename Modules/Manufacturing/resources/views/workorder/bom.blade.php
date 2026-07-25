@@ -2,7 +2,23 @@
     // Single source of truth for Bills of Materials (prebuilts). Loaded here so the
     // Work Orders → BoM tab is self-contained within the dashboard shell.
     $boms           = \Modules\Manufacturing\Models\ProductBom::with('items')->latest()->get();
-    $inventoryItems = \Modules\Inventory\Models\Item::query()->orderBy('name')->get(['id', 'sku', 'name']);
+    $inventoryItems = \Modules\Inventory\Models\Item::with('category')->orderBy('name')->get(['id', 'sku', 'name', 'category_id'])
+        // Packaging/packing materials are not PC components — keep them out of BoMs.
+        ->reject(function ($i) {
+            $cat = strtolower((string) optional($i->category)->name);
+            return str_contains($cat, 'packag') || str_contains($cat, 'packing');
+        })
+        ->values();
+
+    // Prebuilt as plain PHP so the JSON is emitted with {!! !!} — avoids Blade's
+    // @json directive choking on the multi-line closure. Consumed by bom.js.
+    $bomInventoryData = $inventoryItems->map(fn ($item) => [
+        'id'       => $item->id,
+        'sku'      => $item->sku,
+        'name'     => $item->name,
+        'label'    => trim($item->sku.' · '.$item->name),
+        'category' => optional($item->category)->name ?? '',
+    ])->values();
 @endphp
 
 <div class="flex gap-3 h-full text-nexora-deep-navy">
@@ -109,27 +125,5 @@
     </section>
 </div>
 
-<script>
-const bomInventory = @json($inventoryItems->map(fn($item) => ['id' => $item->id, 'label' => trim($item->sku.' · '.$item->name)])->values());
-let bomComponentIndex = 0;
-
-function addBomComponent() {
-    const i = bomComponentIndex++;
-    const options = bomInventory.map(x => `<option value="${x.id}">${x.label}</option>`).join('');
-    document.getElementById('components').insertAdjacentHTML('beforeend', `
-        <div class="flex items-center gap-2">
-            <select name="items[${i}][inventory_item_id]" required
-                    class="flex-1 border border-nexora-corporate/40 rounded-lg px-2.5 py-2 text-xs
-                           text-nexora-deep-navy bg-nexora-slate-200 focus:outline-none focus:border-nexora-corporate">
-                <option value="">Select inventory item</option>${options}
-            </select>
-            <input type="number" name="items[${i}][quantity_required]" value="1" min="1" required
-                   class="w-16 border border-nexora-corporate/40 rounded-lg px-2.5 py-2 text-xs
-                          text-nexora-deep-navy bg-nexora-slate-200 focus:outline-none focus:border-nexora-corporate">
-            <button type="button" onclick="this.parentElement.remove()"
-                    class="w-7 h-7 rounded-full flex items-center justify-center text-nexora-navy-mid
-                           hover:bg-nexora-danger/10 hover:text-nexora-danger transition-colors text-sm leading-none">×</button>
-        </div>`);
-}
-addBomComponent();
-</script>
+<script id="bom-inventory-data" type="application/json">{!! $bomInventoryData->toJson() !!}</script>
+<script src="{{ asset('manufacturing/js/bom.js') }}"></script>
