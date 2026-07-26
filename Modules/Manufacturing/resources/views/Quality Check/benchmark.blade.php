@@ -36,6 +36,7 @@
 
     $checkMap = $checks->keyBy('id');
     $flagged  = $results->filter(fn($r) => in_array($r['verdict'], ['Warn','Fail']) && $r['note'] !== '');
+    $allPass  = $totalChecks > 0 && $passCount === $totalChecks;
 
     $rangePill = $rangeStyles[$range] ?? 'bg-nexora-slate-500/80 text-white';
 @endphp
@@ -247,6 +248,23 @@
                 @endforeach
             </div>
 
+            @if($allPass)
+            <div class="bg-nexora-slate-200 border border-nexora-success/50 rounded-xl p-4">
+                <p class="text-[10px] font-semibold text-nexora-deep-navy uppercase tracking-wider mb-2">
+                    QC Complete
+                </p>
+                <p class="text-[10px] text-nexora-navy-mid leading-relaxed mb-3">
+                    Every check passed. Saving will release this build to Order Fulfillment.
+                </p>
+                <button onclick="confirmSendToFulfillment()"
+                        class="w-full py-1.5 rounded-lg text-[10px] font-semibold
+                               border border-nexora-success/50 bg-nexora-success/10 text-nexora-success
+                               hover:bg-nexora-success/20 transition-colors duration-150">
+                    Send to Order Fulfillment
+                </button>
+            </div>
+            @endif
+
             @if($flagged->count())
             <div class="bg-nexora-slate-200 border border-nexora-corporate/50 rounded-xl p-4">
                 <p class="text-[10px] font-semibold text-nexora-deep-navy uppercase tracking-wider mb-3">
@@ -277,12 +295,6 @@
                 </button>
             </div>
             @endif
-
-            <button class="w-full py-2 rounded-xl text-xs font-semibold
-                           border border-nexora-corporate bg-nexora-corporate text-white
-                           hover:bg-nexora-navy-mid transition-colors duration-150">
-                Submit QC Report
-            </button>
 
         </div>
     </div>

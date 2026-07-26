@@ -31,11 +31,17 @@ class BomController extends Controller
         abort_unless($clientId > 0, 403);
 
         $itemIds = collect($validated['items'])->pluck('inventory_item_id')->unique()->values();
-        $inventoryItems = Item::query()->whereIn('id', $itemIds)->get()->keyBy('id');
+        $inventoryItems = Item::with('category')->whereIn('id', $itemIds)->get()->keyBy('id');
 
         if ($inventoryItems->count() !== $itemIds->count()) {
             return back()->withErrors(['items' => 'Every BOM component must belong to this client inventory.'])->withInput();
         }
+
+        // Section is derived from the components' category, not a stored type.
+        $isPackaging = $inventoryItems->contains(function ($item) {
+            $cat = strtolower((string) optional($item->category)->name);
+            return str_contains($cat, 'packag') || str_contains($cat, 'packing');
+        });
 
         DB::connection('manufacturing')->transaction(function () use ($validated, $inventoryItems): void {
             $bom = ProductBom::create([
@@ -56,7 +62,11 @@ class BomController extends Controller
             }
         });
 
-        return redirect()->route('manufacturing.boms.index')->with('success', 'Bill of Materials created. It is now available to E-commerce.');
+        return redirect()->route('manufacturing.dashboard', [
+            'page' => 'orders',
+            'sub' => 'boms',
+            'bomType' => $isPackaging ? 'packaging' : 'prebuilt',
+        ])->with('success', 'Bill of Materials created. It is now available to E-commerce.');
     }
 
     public function destroy(ProductBom $bom): RedirectResponse

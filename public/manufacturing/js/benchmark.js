@@ -157,6 +157,15 @@ function updateBenchmarkCounts() {
 }
 
 // ── Save ────────────────────────────────────────────────────────────────
+// ── Send to order fulfillment ────────────────────────────────────────────
+function confirmSendToFulfillment() {
+    openConfirmModal(
+        'This saves the QC results and releases the build to Order Fulfillment for packing.',
+        () => saveBenchmarkResults(),
+        { title: 'Send to order fulfillment?', confirmLabel: 'Send' }
+    );
+}
+
 async function saveBenchmarkResults() {
     // Every measurable check must have a result value before saving. Pass/fail
     // checks (unit === 'pass') are verdict-only and are exempt.

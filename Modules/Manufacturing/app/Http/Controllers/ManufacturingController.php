@@ -195,7 +195,6 @@ class ManufacturingController extends Controller
                 // Sourcing (pending); the rework screen shows live stock state.
                 $order->loadMissing('parts');
                 collect($flagged)
-                    ->filter(fn ($r) => $r['verdict'] === 'Fail')
                     ->map(fn ($r) => explode('_', $r['checkId'])[0])
                     ->unique()
                     ->each(function (string $category) use ($rework, $order) {
